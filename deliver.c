@@ -10,7 +10,12 @@
 #include <errno.h>
 #include "packet.h"
 
+#define TIMER
 #define MAX_PACK_LEN 4096
+
+#ifdef TIMER
+#include <time.h>
+#endif
 
 int main(int argc, char const *argv[]) {
   if (argc != 3) {
@@ -44,7 +49,7 @@ int main(int argc, char const *argv[]) {
   }
 
   // Get user input
-  printf("Please specify transfer protocol and file name:\n");
+  printf("Please specify transfer protocol and file name: ");
   char buf[256];
   bzero(buf, 256);
   fgets(buf, 256, stdin);
@@ -73,6 +78,10 @@ int main(int argc, char const *argv[]) {
   fseek(fp, 0, SEEK_SET);
   unsigned int total_frag = (unsigned int)ceil(((double)file_size) / DATA_LEN);
 
+#ifdef TIMER
+  clock_t time = clock();
+#endif
+
   // Send initial protocol name to server to init a file transfer
   if((sendto(sockfd, proto_name, strlen(proto_name), 0, serverinfo->ai_addr, serverinfo->ai_addrlen)) == -1){
     printf("talker: sendto\n");
@@ -90,6 +99,10 @@ int main(int argc, char const *argv[]) {
     printf("Got 'no' from server, quiting...\n");
     exit(1);
   }
+#ifdef TIMER
+  time = clock() - time;
+  printf("The round trip takes %.3f ms\n", ((float)time * 1000) / CLOCKS_PER_SEC);
+#endif
 
   // Start file transfer
   char file_buf[DATA_LEN];
@@ -100,8 +113,6 @@ int main(int argc, char const *argv[]) {
     int size = fread(file_buf, sizeof(char), DATA_LEN, fp);
     // send the packet
     unsigned int header_offset = sprintf(pack_buf, "%d:%d:%d:%s:", total_frag, frag_no, size, file_name);
-    /* printf("confirm file name is %s\n", file_name); */
-    /* printf("pack header is %s\n", pack_buf); */
     memcpy(pack_buf + header_offset, file_buf, size);
     if ((sendto(sockfd, pack_buf, header_offset + size, 0, serverinfo->ai_addr, serverinfo->ai_addrlen)) == -1) {
       printf("Error sending packet %d\n", frag_no);

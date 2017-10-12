@@ -45,6 +45,8 @@ int main(int argc, char const * argv[]) {
     exit(1);
   }
 
+  printf("Start listing at port %d\n", port);
+
   for (;;) {
     socklen_t client_len = sizeof(client_addr);
     char buf[BUFFER_SIZE];
