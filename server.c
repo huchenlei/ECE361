@@ -7,6 +7,7 @@
 #include <string.h>
 #include "packet.h"
 
+#define RAND 2 // One in n packets will get ACKed
 #define BUFFER_SIZE 4096 // Max packet size
 #define FTP_RES "yes"
 #define OTHER_RES "no"
@@ -39,7 +40,7 @@ int main(int argc, char const * argv[]) {
   memset(server_addr.sin_zero, 0, sizeof(server_addr.sin_zero));
 
   /* possible other option to config socket
-    inet_pton(AF_INET, , &(server_addr.sin_addr)); // IPv4 */
+     inet_pton(AF_INET, , &(server_addr.sin_addr)); // IPv4 */
   if ((bind(sockfd, (struct sockaddr*) &server_addr, sizeof(server_addr))) == -1) {
     printf("Failed to bind socket\n");
     exit(1);
@@ -97,23 +98,37 @@ int main(int argc, char const * argv[]) {
             // ACK if the received packet has been received before or
             // its the direct subsequent packet of the previous packet
             // ELSE NACK
-            if (p_re.frag_no - prev_frag_no == 1 || received_nos[p_re.frag_no]) {
-              // ACK
-              if(sendto(sockfd, ACK_RES, strlen(ACK_RES), 0, (struct sockaddr*)&client_addr, sizeof(server_addr)) == -1) {
-                printf("Failed to ack the client packet received\n");
+#ifdef RAND
+            time_t t;
+            srand((unsigned) time(&t));
+            int seed = rand();
+            if (seed % RAND == 0) {
+              printf("picking packet %d ...\n", p_re.frag_no);
+#endif
+              if (p_re.frag_no - prev_frag_no == 1 || received_nos[p_re.frag_no]) {
+                // ACK
+                if(sendto(sockfd, ACK_RES, strlen(ACK_RES), 0, (struct sockaddr*)&client_addr, sizeof(server_addr)) == -1) {
+                  printf("Failed to ack the client packet received\n");
+                }
+                if (received_nos[p_re.frag_no]) {
+                  /* free(p_re.filename); */
+                  continue; // Continue listening since the packet has already been processed
+                }
+                else
+                  prev_frag_no++;
+              } else {
+                // NACK
+                if (sendto(sockfd, NACK_RES, strlen(NACK_RES), 0, (struct sockaddr*)&client_addr, sizeof(server_addr) == -1)) {
+                  printf("Failed to nack the client packet is not accepted\n");
+                  /* free(p_re.filename); */
+                  continue; // Continue listening for packet
+                }
               }
-              if (received_nos[p_re.frag_no])
-                continue; // Continue listening since the packet has already been processed
-              else
-                prev_frag_no++;
+#ifdef RAND
             } else {
-              // NACK
-              if (sendto(sockfd, NACK_RES, strlen(NACK_RES), 0, (struct sockaddr*)&client_addr, sizeof(server_addr) == -1)) {
-                printf("Failed to nack the client packet is not accepted\n");
-                continue; // Continue listening for packet
-              }
+              printf("ignoring packet %d because of RAND\n", p_re.frag_no);
             }
-
+#endif
             // Add frag no to recevied_nos
             received_nos[p_re.frag_no] = 1;
             // Write to file

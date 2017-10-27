@@ -9,18 +9,16 @@
 #include <math.h>
 #include <errno.h>
 #include "packet.h"
+#include <time.h>
 
 #define TIMER
 #define MAX_PACK_LEN 4096
-
-#ifdef TIMER
-#include <time.h>
-#endif
+#define TIMEOUT_MSEC 200
 
 int main(int argc, char const *argv[]) {
   if (argc != 3) {
     printf("Wrong number of argument\n");
-    printf("Usage: deliver <server address> <server port num>");
+    printf("Usage: deliver <server address> <server port num>\n");
     exit(1);
   }
 
@@ -104,11 +102,19 @@ int main(int argc, char const *argv[]) {
   printf("The round trip takes %.3f ms\n", ((float)time * 1000) / CLOCKS_PER_SEC);
 #endif
 
+  // Config socket for timeout
+  struct timeval tv;
+  tv.tv_sec = 0;
+  tv.tv_usec = TIMEOUT_MSEC * 1000;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) {
+    printf("failed to config timeout\n");
+    exit(1);
+  }
   // Start file transfer
   char file_buf[DATA_LEN];
   char pack_buf[MAX_PACK_LEN];
   unsigned int frag_no = 0;
-  while (!feof(fp)) {
+  while (1) {
     // read data from file
     int size = fread(file_buf, sizeof(char), DATA_LEN, fp);
     // send the packet
@@ -135,9 +141,12 @@ int main(int argc, char const *argv[]) {
       printf("NACK! resending the packet %d...\n", frag_no);
       continue;
     }
-    if (strcmp(buf, ACK_RES) != 0) {
+    if (strcmp(buf, ACK_RES) != 0 && strncmp(buf, "no", 2) != 0) {
       printf("Unknown server response: %s, quiting...\n", buf);
       exit(1);
+    } else {
+      // receiving the last ACK
+      if (feof(fp)) break;
     }
     frag_no++;
   }
