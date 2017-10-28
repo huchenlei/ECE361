@@ -1,2 +1,5 @@
 # ignore the recv path
-/recv/*
+file_transfer/recv/*
+
+# ignore all object files
+*.o
