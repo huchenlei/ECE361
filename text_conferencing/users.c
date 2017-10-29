@@ -1,32 +1,101 @@
 #include <stdio.h>
 #include <string.h>
-#include "users.h"
+#include <errno.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <assert.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
 
-const struct user users[USER_NUM] = {
-  {.name = "Chenlei", .pass = "chenlei"},
-  {.name = "Alex", .pass = "alex"}
+#include <arpa/inet.h>
+#include "users.h"
+#include "message.h"
+#include "session.h"
+
+struct user users[USER_NUM] = {
+  {.name = "Chenlei", .pass = "chenlei", .cur_session = NULL, .sockfd = -1, .active = 0},
+  {.name = "Alex", .pass = "alex", .cur_session = NULL, .sockfd = -1, .active = 0}
 };
 
-int verify_user(char* data) {
-  char* original_data = data;
-  unsigned name_len = 0;
-  while (*data != ',') {
-    name_len++;
-    data++;
+int auth_user(int sockfd) {
+  struct timeval timeout = {.tv_sec = 10, .tv_usec = 0};
+  int err = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  if (err) {
+    printf("auth_user: failed to config socket\n");
+    return err;
   }
-  char name[MAX_NAME];
-  char pass[MAX_PASS];
-  strncpy(name, original_data, name_len);
-  strncpy(pass, original_data+name_len+1, // +1 to ignore ','
-          strlen(original_data) - name_len);
-#ifdef DEBUG
-  printf("user: %s, pass: %s\n", name, pass);
-#endif
-
-  for (unsigned int i; i < USER_NUM; i++) {
-    if ((strcmp(users[i].name, name) == 0) && (strcmp(users[i].pass, pass) == 0)) {
-      return 1; // return true
+  char buf[MAX_MESSAGE];
+  err = recv(sockfd, buf, MAX_MESSAGE, 0);
+  if (errno == EAGAIN) {
+    // TODO handle timeout
+    return 0;
+  }
+  struct message m;
+  parse_message(buf, &m);
+  if (m.type == LOGIN) {
+    for (size_t i = 0; i < USER_NUM; i++) {
+      if ((strcmp(users[i].name, m.source) == 0) && (strcmp(users[i].pass, m.data) == 0)) {
+        if (users[i].active) {
+          response(sockfd, LO_NAK, "user already logged in");
+          return 0;
+        } else {
+          response(sockfd, LO_ACK, "");
+          users[i].active = 1;
+          users[i].sockfd = sockfd;
+          printf("User %s connect to server\n", m.source);
+          return 1; // return true
+        }
+      }
     }
+    response(sockfd, LO_NAK, "wrong username or password");
+  } else {
+    response(sockfd, LO_NAK, "wrong message type for login");
   }
-  return 0; // return false if no matching
+  return 0; // return false
+}
+
+int logout_user(struct user* user) {
+  if (user->cur_session != NULL) { // remove user in current session
+
+  }
+  user->active = 0;
+  FD_CLR(user->sockfd, &server_fds);
+  close(user->sockfd);
+  user->sockfd = -1;
+  // TODO reset_max_sock
+  // Might not need since it's done for each loop
+  return 0;
+}
+
+int join_session(struct user* user, struct session* s) {
+  if (session_is_full(s)) {
+    char msg[MAX_DATA];
+    sprintf(msg, "%s:session already full %d", s->session_id, MAX_USER_SESSION);
+    response(user->sockfd, JN_NAK, msg);
+    return 1;
+  }
+  int err = session_add_user(s, user);
+  if (err) return err; // TODO handle other errors
+  user->cur_session = s;
+  response(user->sockfd, JN_ACK, s->session_id);
+  return 0;
+}
+
+int leave_session(struct user* user) {
+  if (user->cur_session == NULL) {
+    response(user->sockfd, MESSAGE, "No in a session");
+    return 1;
+  }
+  if (session_remove_user(user->cur_session, user)) {
+    response(user->sockfd, MESSAGE, "500 server error!");
+    return 1; // remove failed(should never happen)
+  }
+
+  char buf[MAX_DATA];
+  sprintf(buf, "%s has left session %s", user->name, user->cur_session->session_id);
+  response(user->sockfd, MESSAGE, buf);
+  user->cur_session = NULL;
+  return 0;
 }

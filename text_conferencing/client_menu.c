@@ -62,7 +62,9 @@ int menu() {
       err = create_session(session_id);
     }
   } else if (strcmp(command, "/list") == 0) {
-    err = list();
+    LOGIN_CHECK{
+      err = list();
+    }
   } else if (strcmp(command, "/quit") == 0) {
     err = quit();
   } else {

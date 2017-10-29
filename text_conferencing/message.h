@@ -6,13 +6,15 @@
 #define MAX_NAME 256
 #define MAX_DATA 2048
 
+#define MAX_MESSAGE sizeof(struct message)
+
 typedef unsigned int message_t;
 
 struct message {
   message_t type;
   size_t size;
-  unsigned char source[MAX_NAME];
-  unsigned char data[MAX_DATA];
+  char source[MAX_NAME];
+  char data[MAX_DATA];
 };
 
 #define UNKNOWN 0
@@ -30,4 +32,7 @@ struct message {
 #define QUERY 12
 #define QU_ACK 13
 
+void parse_message(const char* buf, struct message* m);
+// @server response to client
+int response(int sockfd, message_t type, const char* data);
 #endif

@@ -13,23 +13,12 @@
 
 #include "message.h"
 #include "users.h"
+#include "session.h"
 
 // Configuable constants
-
 #define WINDOW_SIZE 32 // listening queue size
-/* #define */
-/* #define */
-/* #define */
-/* #define */
-#define DEBUG
 
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa) {
-  if (sa->sa_family == AF_INET)
-    return &(((struct sockaddr_in*)sa)->sin_addr);
-  else
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
+#define DEBUG
 
 int main(int argc, char const * argv[]) {
   if (argc != 2) {
@@ -87,28 +76,41 @@ int main(int argc, char const * argv[]) {
 
   printf("server: start listening at %d ...\n", port);
 
+  int main_sockfd = sockfd;
+  int max_sockfd;
+  for (;;) {
+    FD_ZERO(&server_fds);
+    FD_SET(main_sockfd, &server_fds);
+    max_sockfd = main_sockfd;
+    for (size_t i = 0; i < USER_NUM; i++) {
+      if (users[i].active) {
+        assert(users[i].sockfd != -1);
+        FD_SET(users[i].sockfd, &server_fds);
+        if (users[i].sockfd > max_sockfd)
+          max_sockfd = users[i].sockfd;
+      }
+    }
 
-  struct sockaddr_storage their_addr;
-  char s[INET6_ADDRSTRLEN];
-  while(1) { // main accept() loop
-    socklen_t sin_size = sizeof their_addr;
-    new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-    if (new_fd == -1) {
-      perror("accept");
-      continue;
+    // always handle max sockfd first
+    int err = select(max_sockfd + 1, &server_fds, NULL, NULL, NULL);
+    if (err < 0) perror("select");
+
+    if (FD_ISSET(main_sockfd, &server_fds)) {
+      // Login request
+      struct sockaddr new_addr;
+      socklen_t new_addrlen;
+
+      int new_sockfd = accept(sockfd, &new_addr, &new_addrlen);
+      if (new_sockfd < 0) {
+        perror("accept");
+        continue;
+      }
+
+      if (!auth_user(new_sockfd))
+        close(new_sockfd);
+    } else {
+      // Other request
     }
-    inet_ntop(their_addr.ss_family,
-              get_in_addr((struct sockaddr *)&their_addr),
-              s, sizeof s);
-    printf("server: got connection from %s\n", s);
-    if (!fork()) { // this is the child process
-      close(sockfd); // child doesn't need the listener
-      if (send(new_fd, "Hello, world!", 13, 0) == -1)
-        perror("send");
-      close(new_fd);
-      exit(0);
-    }
-    close(new_fd); // parent doesn't need this
   }
   return 0;
 }
