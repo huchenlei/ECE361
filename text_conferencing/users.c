@@ -2,7 +2,7 @@
 #include <string.h>
 #include "users.h"
 
-const user users[USER_NUM] = {
+const struct user users[USER_NUM] = {
   {.name = "Chenlei", .pass = "chenlei"},
   {.name = "Alex", .pass = "alex"}
 };

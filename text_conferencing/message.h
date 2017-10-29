@@ -1,16 +1,21 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
+#include <stdlib.h>
+
 #define MAX_NAME 256
 #define MAX_DATA 2048
 
-struct lab3message {
-  unsigned int type;
-  unsigned int size;
+typedef unsigned int message_t;
+
+struct message {
+  message_t type;
+  size_t size;
   unsigned char source[MAX_NAME];
   unsigned char data[MAX_DATA];
 };
 
+#define UNKNOWN 0
 #define LOGIN 1
 #define LO_ACK 2
 #define LO_NAK 3

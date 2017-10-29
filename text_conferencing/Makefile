@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS=-g -c
 LIBS=-lm -lpthread
-SRCS=server.c client.c users.c
+SRCS=server.c client.c users.c client_menu.c
 OBJS=$(SRCS:.c=.o)
 
 all:
@@ -10,8 +10,8 @@ all:
 server: server.o users.o
 	$(CC) -o server server.o users.o $(LIBS)
 
-client: client.o
-	$(CC) -o client client.o  $(LIBS)
+client: client.o users.o client_menu.o
+	$(CC) -o client client.o users.o client_menu.o $(LIBS)
 
 $(OBJS):$(SRCS)
 	$(CC) $(CFLAGS) $(SRCS)
