@@ -14,6 +14,8 @@
 #include "message.h"
 #include "session.h"
 
+#define DEBUG
+
 struct user users[USER_NUM] = {
   {.name = "Chenlei", .pass = "chenlei", .cur_session = NULL, .sockfd = -1, .active = 0},
   {.name = "Alex", .pass = "alex", .cur_session = NULL, .sockfd = -1, .active = 0}
@@ -34,6 +36,10 @@ int auth_user(int sockfd) {
   }
   struct message m;
   parse_message(buf, &m);
+#ifdef DEBUG
+  printf("recevicing: %s\n", buf);
+  printf("name: %s\npass: %s\n", m.source, m.data);
+#endif
   if (m.type == LOGIN) {
     for (size_t i = 0; i < USER_NUM; i++) {
       if ((strcmp(users[i].name, m.source) == 0) && (strcmp(users[i].pass, m.data) == 0)) {
@@ -58,7 +64,7 @@ int auth_user(int sockfd) {
 
 int logout_user(struct user* user) {
   if (user->cur_session != NULL) { // remove user in current session
-
+    user_leave_session(user);
   }
   user->active = 0;
   FD_CLR(user->sockfd, &server_fds);
@@ -66,12 +72,18 @@ int logout_user(struct user* user) {
   user->sockfd = -1;
   // TODO reset_max_sock
   // Might not need since it's done for each loop
+  printf("Successfully logged out %s\n", user->name);
   return 0;
 }
 
-int join_session(struct user* user, struct session* s) {
+int user_join_session(struct user* user, struct session* s) {
+  char msg[MAX_DATA];
+  if (s == NULL) {
+    sprintf(msg, "%s:session does not exist", s->session_id);
+    response(user->sockfd, JN_NAK , msg);
+    return 1;
+  }
   if (session_is_full(s)) {
-    char msg[MAX_DATA];
     sprintf(msg, "%s:session already full %d", s->session_id, MAX_USER_SESSION);
     response(user->sockfd, JN_NAK, msg);
     return 1;
@@ -83,7 +95,7 @@ int join_session(struct user* user, struct session* s) {
   return 0;
 }
 
-int leave_session(struct user* user) {
+int user_leave_session(struct user* user) {
   if (user->cur_session == NULL) {
     response(user->sockfd, MESSAGE, "No in a session");
     return 1;
@@ -95,7 +107,15 @@ int leave_session(struct user* user) {
 
   char buf[MAX_DATA];
   sprintf(buf, "%s has left session %s", user->name, user->cur_session->session_id);
-  response(user->sockfd, MESSAGE, buf);
+  session_send(user->cur_session, buf);
   user->cur_session = NULL;
   return 0;
+}
+
+int user_send_msg(struct user* user, const char* msg) {
+  if (user->cur_session == NULL) {
+    response(user->sockfd, MESSAGE, "[Server] Please join a session first");
+    return 1;
+  }
+  return session_send(user->cur_session, msg);
 }

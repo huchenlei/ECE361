@@ -19,7 +19,7 @@
 // Global variables
 struct user* cur_user = NULL; // current user
 char* cur_session = NULL; // current session id
-int client_sock; // current socket
+int client_sock = -1; // current socket
 
 #define LOGIN_CHECK                                             \
   if(!isloggedin())                                             \
@@ -27,6 +27,7 @@ int client_sock; // current socket
   else
 
 int menu() {
+
   int err = 0;
   char session_id[MAX_FIELD];
   char command[MAX_COMMAND_LEN];
@@ -87,23 +88,25 @@ int isloggedin() {
 int request(message_t type, const char* source, const char* data) {
   char msg_buf[sizeof(struct message)];
   bzero(msg_buf, sizeof(struct message));
-  sprintf(msg_buf, "%d:%lu:%s%s", type, strlen(data), source, data);
+  sprintf(msg_buf, "%d:%lu:%s:%s", type, strlen(data), source, data);
 #ifdef DEBUG
-  printf("message buffer:\n%s\n", msg_buf);
+  printf("sending message: %s to server\n", msg_buf);
 #endif
   int err = send(client_sock, msg_buf, strlen(msg_buf), 0);
-  if (err) {
+  if (err == -1) {
     printf("Failed to send request: %s\n", msg_buf);
+    return err;
   }
-  return err;
+  return 0;
 }
 
+// Remember to free body since it's malloced
 int recv_ack(message_t ack_type, message_t nak_type, int* retval, char* body) {
   char msg_buf[sizeof(struct message)];
   int err = recv(client_sock, msg_buf, sizeof(struct message), 0);
-  if (err) {
+  if (err == -1) {
     printf("Failed receiving ack/nak!...\n");
-    return err;
+    return 1;
   }
   char* iter = msg_buf;
   size_t type_len = 0;
@@ -114,6 +117,9 @@ int recv_ack(message_t ack_type, message_t nak_type, int* retval, char* body) {
   char type_str[type_len + 1]; // + 1 for '\0'
   strncpy(type_str, msg_buf, type_len);
   message_t msg_type = atoi(type_str);
+#ifdef DEBUG
+  printf("message type: %d\nmessage content: %s\n", msg_type, msg_buf);
+#endif
   if (msg_type == ack_type) {
     *retval = 1;
     body = NULL;
@@ -166,11 +172,13 @@ int login(const char* name, const char* pass, const char* server_ip, const char*
   recv_ack(LO_ACK, LO_NAK, &isack, result);
   if (!isack) {
     printf("Login failed: %s\n", result);
+    free(result);
     return 3;
   }
   cur_user = malloc(sizeof(struct user));
   strcpy(cur_user->name, name);
   strcpy(cur_user->pass, pass);
+  printf("Successfully loggged in as %s\n", cur_user->name);
   return 0;
 }
 
@@ -181,7 +189,7 @@ int logout() {
   if (err) {
     printf("Failed to logout\n");
   } else {
-    printf("Logged out%s\n", cur_user->name);
+    printf("Logged out %s\n", cur_user->name);
     free(cur_user);
     cur_user = NULL;
   }
@@ -203,6 +211,7 @@ int join_session(const char* session_id) {
     return 0;
   } else {
     printf("failed to join session: %s\n", result);
+    free(result);
     return 1;
   }
 }
@@ -226,6 +235,7 @@ int create_session(const char* session_id) {
     printf("Failed to create session\n");
   } else {
     printf("Successfully created session %s\n", result);
+    free(result);
   }
   return err;
 }
@@ -241,15 +251,21 @@ int list() {
   } else {
     // TODO format the list string
     printf("Sessions: %s\n", result);
+    free(result);
   }
   return err;
 }
 
 int quit() {
-  int err = request(EXIT, "", "");
-  if (err) return err;
+  int err = 0;
+  if (cur_user != NULL) {
+    err = logout();
+  }
+  if (err) {
+    printf("failed to quit\n");
+    return err;
+  }
   printf("\nQuiting Text Conferencing Pro v1.0\n");
-  close(client_sock);
   exit(0);
 }
 

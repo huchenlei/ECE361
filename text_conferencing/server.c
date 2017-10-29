@@ -20,6 +20,9 @@
 
 #define DEBUG
 
+// Handles user operations
+int handle_user_req();
+
 int main(int argc, char const * argv[]) {
   if (argc != 2) {
     printf("usage: server <port number>\n>");
@@ -40,7 +43,6 @@ int main(int argc, char const * argv[]) {
   }
 
   int sockfd; // Listening on sockfd
-  int new_fd; // new connection on new_fd
   struct addrinfo *iter;
   for(iter = res; iter != NULL; iter = res->ai_next) {
     sockfd = socket(iter->ai_family, iter->ai_socktype, iter->ai_protocol);
@@ -110,7 +112,64 @@ int main(int argc, char const * argv[]) {
         close(new_sockfd);
     } else {
       // Other request
+      handle_user_req();
     }
   }
   return 0;
+}
+
+int handle_user_req() {
+  for (size_t i = 0; i < USER_NUM; i++) {
+    struct user* cur_user = &users[i];
+    if (!cur_user->active) continue;
+    assert(cur_user->sockfd > 0);
+    if (FD_ISSET(cur_user->sockfd, &server_fds)) {
+      char buf[MAX_MESSAGE];
+      struct message m;
+      /* bzero(buf, MAX_MESSAGE); */
+      buf[MAX_MESSAGE - 1] = '\0'; // avoid overflow
+      int err = recv(cur_user->sockfd, buf, MAX_MESSAGE, 0);
+      if (err == -1) {
+        printf("Failed to receive message from sockfd %d\n", cur_user->sockfd);
+        continue;
+      }
+#ifdef DEBUG
+      printf("Receving from %s: %s\n", cur_user->name, buf);
+#endif
+      parse_message(buf, &m);
+
+      // Sanity check
+      if (strcmp(m.source, cur_user->name) != 0) {
+        printf("Fatal: sockfd does not match username! sock %d user %s source %s\n", cur_user->sockfd, cur_user->name, m.source);
+        return 1;
+      }
+      assert(cur_user->active);
+      // Process each situation
+      switch (m.type) {
+      case EXIT:
+        err = logout_user(cur_user);
+        break;
+      case JOIN:
+        err = user_join_session(cur_user, find_session(m.data));
+        break;
+      case LEAVE_SESS:
+        err = user_leave_session(cur_user);
+        break;
+      case NEW_SESS:
+        err = new_session(m.data, cur_user);
+        break;
+      case QUERY:
+        // TODO
+        printf("received a query\n");
+        break;
+      case MESSAGE:
+        err = user_send_msg(cur_user, m.data);
+        break;
+      default:
+        printf("Unknown type of message received...\n");
+        err = 1;
+      }
+      return err;
+    } // if
+  } // for loop
 }

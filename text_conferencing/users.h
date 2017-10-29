@@ -19,6 +19,7 @@ extern struct user users[USER_NUM];
 
 int auth_user(int sockfd);
 int logout_user(struct user* user);
-int join_session(struct user* user, struct session* s);
-int leave_session(struct user* user);
+int user_join_session(struct user* user, struct session* s);
+int user_leave_session(struct user* user);
+int user_send_msg(struct user* user, const char* msg);
 #endif
