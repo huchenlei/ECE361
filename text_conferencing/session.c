@@ -2,6 +2,7 @@
 #include "users.h"
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 fd_set server_fds;
 struct session* sessions[MAX_SESSION];
@@ -16,8 +17,12 @@ int new_session(const char* session_id, struct user* creator) {
       new_s->creator = creator;
       bzero(new_s->session_id, MAX_SESSION_ID);
       bzero(new_s->users, MAX_SESSION_ID);
-
-      return response(creator->sockfd, NS_ACK, session_id);
+      strcpy(new_s->session_id, session_id);
+      // Add creator to session list
+      new_s->users[0] = creator;
+      creator->cur_session = new_s;
+      printf("User %s create new session %s\n", creator->name, new_s->session_id);
+      return response(creator->sockfd, NS_ACK, new_s->session_id);
     }
   }
   response(creator->sockfd, UNKNOWN, "[Server] max session num reached");

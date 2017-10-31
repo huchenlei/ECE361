@@ -39,6 +39,7 @@ int parse_message(const char* buf, struct message* m) {
   m->size = atoi(strs[1]);
   strcpy(m->source, strs[2]);
   strncpy(m->data, buf + start_i, m->size);
+  m->data[m->size] = '\0';
 #ifdef DEBUG
   printf("parsing message as: %d %d %s %s\n", m->type, m->size, m->source, m->data);
 #endif
@@ -50,7 +51,7 @@ int parse_message(const char* buf, struct message* m) {
 int response(int sockfd, message_t type, const char* data) {
   char buf[MAX_MESSAGE];
   sprintf(buf, "%d:%s", type, data);
-  int err = send(sockfd, buf, strlen(buf), 0);
+  int err = send(sockfd, buf, strlen(buf) + 1, 0);
   if (err == -1) {
     printf("response: failed to response to client sockfd %d\n", sockfd);
     return 1;

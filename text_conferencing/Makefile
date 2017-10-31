@@ -21,4 +21,6 @@ clean:
 	rm -f *.o server client
 
 test:
-	perl test.pl
+	make
+	./server 5000
+	# perl test.pl

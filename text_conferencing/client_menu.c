@@ -101,7 +101,7 @@ int request(message_t type, const char* source, const char* data) {
 }
 
 // Remember to free body since it's malloced
-int recv_ack(message_t ack_type, message_t nak_type, int* retval, char* body) {
+int recv_ack(message_t ack_type, message_t nak_type, int* retval, char** body) {
   char msg_buf[sizeof(struct message)];
   int err = recv(client_sock, msg_buf, sizeof(struct message), 0);
   if (err == -1) {
@@ -118,17 +118,18 @@ int recv_ack(message_t ack_type, message_t nak_type, int* retval, char* body) {
   strncpy(type_str, msg_buf, type_len);
   message_t msg_type = atoi(type_str);
 #ifdef DEBUG
-  printf("message type: %d\nmessage content: %s\n", msg_type, msg_buf);
+  printf("ack: message type: %d\nmessage content: %s\n", msg_type, msg_buf);
 #endif
+  *body = malloc(sizeof(char) * (strlen(msg_buf) + 1));
+  strcpy(*body, msg_buf + type_len + 1);
+
   if (msg_type == ack_type) {
     *retval = 1;
-    body = NULL;
   } else if (msg_type == nak_type) {
     *retval = 0;
-    body = malloc(sizeof(char) * (strlen(msg_buf) + 1));
-    strcpy(body, msg_buf);
   } else {
     printf("unexpected ack/nak type %d\n", msg_type);
+    free(*body);
     return 1;
   }
   return 0;
@@ -169,12 +170,12 @@ int login(const char* name, const char* pass, const char* server_ip, const char*
   // Receive LO_ACK or LO_NAK from server
   int isack;
   char* result = NULL;
-  recv_ack(LO_ACK, LO_NAK, &isack, result);
+  recv_ack(LO_ACK, LO_NAK, &isack, &result);
   if (!isack) {
     printf("Login failed: %s\n", result);
-    free(result);
     return 3;
   }
+  free(result);
   cur_user = malloc(sizeof(struct user));
   strcpy(cur_user->name, name);
   strcpy(cur_user->pass, pass);
@@ -202,18 +203,19 @@ int join_session(const char* session_id) {
   if (err) return err;
   int isack;
   char* result = NULL;
-  err = recv_ack(JN_ACK, JN_NAK, &isack, result);
+  err = recv_ack(JN_ACK, JN_NAK, &isack, &result);
   if (err) return err;
   if(isack) {
     printf("Successfully joined session %s\n", session_id);
     cur_session = malloc((strlen(session_id) + 1) * sizeof(char));
     strcpy(cur_session, session_id);
-    return 0;
+    err = 0;
   } else {
     printf("failed to join session: %s\n", result);
-    free(result);
-    return 1;
+    err = 1;
   }
+  free(result);
+  return err;
 }
 
 int leave_session() {
@@ -230,13 +232,13 @@ int create_session(const char* session_id) {
   if (err) return err;
   int isack;
   char* result = NULL;
-  err = recv_ack(NS_ACK, UNKNOWN, &isack, result);
+  err = recv_ack(NS_ACK, UNKNOWN, &isack, &result);
   if (err) {
     printf("Failed to create session\n");
   } else {
     printf("Successfully created session %s\n", result);
-    free(result);
   }
+  free(result);
   return err;
 }
 
@@ -245,14 +247,14 @@ int list() {
   if (err) return err;
   int isack;
   char* result = NULL;
-  err = recv_ack(QU_ACK, UNKNOWN, &isack, result);
+  err = recv_ack(QU_ACK, UNKNOWN, &isack, &result);
   if (err) {
     printf("Failed to list sessions\n");
   } else {
     // TODO format the list string
     printf("Sessions: %s\n", result);
-    free(result);
   }
+  free(result);
   return err;
 }
 

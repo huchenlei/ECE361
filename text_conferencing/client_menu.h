@@ -14,7 +14,7 @@ extern int client_sock;
 //helper functions
 int isloggedin();
 int request(message_t type, const char* source, const char* data);
-int recv_ack(message_t ack_type, message_t nak_type, int* retval, char* body);
+int recv_ack(message_t ack_type, message_t nak_type, int* retval, char** body);
 
 // menu
 int menu();

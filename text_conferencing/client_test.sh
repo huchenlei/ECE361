@@ -10,10 +10,10 @@ expect  {
     }
 }
 
-expect {
-    ".*Success.*": {
-        send "/quit\n"
-    }
-}
+expect "Successfully loggged in as Chenlei"
+send "/createsession TEST_SESSION\n"
+
+# quit the conference
+# send "/quit\n"
 
 interact
