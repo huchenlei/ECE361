@@ -6,3 +6,6 @@ file_transfer/recv/*
 
 server
 client
+
+# IDE related folder
+text_conferencing/nbproject/

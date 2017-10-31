@@ -86,9 +86,11 @@ int isloggedin() {
 }
 
 int request(message_t type, const char* source, const char* data) {
-  char msg_buf[sizeof(struct message)];
-  bzero(msg_buf, sizeof(struct message));
+  assert(data != NULL);
+  char msg_buf[MAX_MESSAGE];
+  bzero(msg_buf, MAX_MESSAGE);
   sprintf(msg_buf, "%d:%lu:%s:%s", type, strlen(data), source, data);
+
 #ifdef DEBUG
   printf("sending message: %s to server\n", msg_buf);
 #endif
@@ -206,9 +208,9 @@ int join_session(const char* session_id) {
   err = recv_ack(JN_ACK, JN_NAK, &isack, &result);
   if (err) return err;
   if(isack) {
-    printf("Successfully joined session %s\n", session_id);
     cur_session = malloc((strlen(session_id) + 1) * sizeof(char));
     strcpy(cur_session, session_id);
+    printf("Successfully joined session %s\n", cur_session);
     err = 0;
   } else {
     printf("failed to join session: %s\n", result);
@@ -219,6 +221,7 @@ int join_session(const char* session_id) {
 }
 
 int leave_session() {
+  assert(cur_session != NULL);
   int err = request(LEAVE_SESS, cur_user->name, cur_session);
   if (err) return err;
   printf("Leave session %s\n", cur_session);
@@ -236,6 +239,8 @@ int create_session(const char* session_id) {
   if (err) {
     printf("Failed to create session\n");
   } else {
+    cur_session = malloc((strlen(session_id) + 1) * sizeof(char));
+    strcpy(cur_session, session_id);
     printf("Successfully created session %s\n", result);
   }
   free(result);

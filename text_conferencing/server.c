@@ -163,6 +163,7 @@ int handle_user_req() {
         break;
       case NEW_SESS:
         err = new_session(m.data, cur_user);
+        break;
       case QUERY:
         // TODO
         printf("received a query\n");

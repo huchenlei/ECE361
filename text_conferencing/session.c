@@ -10,19 +10,19 @@ struct session* sessions[MAX_SESSION];
 int new_session(const char* session_id, struct user* creator) {
   for (size_t i = 0; i < MAX_SESSION; i++) {
     if (sessions[i] == NULL) {
-      struct session* new_s = sessions[i];
-      new_s = malloc(sizeof(struct session)); // TODO free session
-      new_s->sid = i;
-      new_s->user_num = 0;
-      new_s->creator = creator;
-      bzero(new_s->session_id, MAX_SESSION_ID);
-      bzero(new_s->users, MAX_SESSION_ID);
-      strcpy(new_s->session_id, session_id);
+      sessions[i] = malloc(sizeof(struct session));
+      (sessions[i])->sid = i;
+      (sessions[i])->user_num = 0;
+      (sessions[i])->creator = creator;
+      bzero(sessions[i]->session_id, MAX_SESSION_ID);
+      bzero(sessions[i]->users, MAX_SESSION_ID);
+      strcpy(sessions[i]->session_id, session_id);
       // Add creator to session list
-      new_s->users[0] = creator;
-      creator->cur_session = new_s;
-      printf("User %s create new session %s\n", creator->name, new_s->session_id);
-      return response(creator->sockfd, NS_ACK, new_s->session_id);
+      sessions[i]->users[0] = creator;
+      sessions[i]->user_num++;
+      creator->cur_session = sessions[i];
+      printf("User %s create new session %s\n", creator->name, sessions[i]->session_id);
+      return response(creator->sockfd, NS_ACK, sessions[i]->session_id);
     }
   }
   response(creator->sockfd, UNKNOWN, "[Server] max session num reached");
@@ -53,15 +53,31 @@ int session_send(struct session* s, const char* msg) {
 }
 
 int session_remove_user(struct session* s, struct user* user) {
+  int err = 0;
   assert(user->cur_session == s);
   for (size_t i = 0; i < MAX_USER_SESSION; i++) {
     if (s->users[i] == user) {
       s->users[i] = NULL;
       s->user_num--;
-      return 0;
+      if (s->user_num == 0) {
+        // Destory session when there are no user in it
+        err = session_destory(s);
+      }
+      return err;
     }
   }
   return 1;
+}
+
+int session_destory(struct session* s) {
+  if (s->user_num != 0) {
+    printf("Illegal deletion of session that has more than one user\n");
+    return 1; // TODO user will be able to delete session
+  } // illegal destory when there are user in the session
+  assert(sessions[s->sid] != NULL);
+  sessions[s->sid] = NULL;
+  free(s);
+  return 0;
 }
 
 int session_add_user(struct session* s, struct user* user) {

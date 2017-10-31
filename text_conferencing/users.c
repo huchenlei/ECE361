@@ -100,14 +100,21 @@ int user_leave_session(struct user* user) {
     response(user->sockfd, MESSAGE, "No in a session");
     return 1;
   }
+  size_t cur_sid = user->cur_session->sid;
+  char buf[MAX_DATA];
+  sprintf(buf, "%s has left session %s", user->name, user->cur_session->session_id);
+  
   if (session_remove_user(user->cur_session, user)) {
     response(user->sockfd, MESSAGE, "500 server error!");
     return 1; // remove failed(should never happen)
   }
-
-  char buf[MAX_DATA];
-  sprintf(buf, "%s has left session %s", user->name, user->cur_session->session_id);
-  session_send(user->cur_session, buf);
+  
+  if (sessions[cur_sid] != NULL) {
+      // boardcast to users left in current session if the session still exist
+      // after the user quit the session
+      session_send(sessions[cur_sid], buf);
+  }
+  
   user->cur_session = NULL;
   return 0;
 }

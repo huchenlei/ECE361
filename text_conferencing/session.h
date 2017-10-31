@@ -28,4 +28,5 @@ struct session* find_session(const char* session_id);
 int session_send(struct session* s, const char* msg);
 int session_remove_user(struct session* s, struct user* user);
 int session_add_user(struct session* s, struct user* user);
+int session_destory(struct session* s);
 #endif

@@ -13,7 +13,11 @@ expect  {
 expect "Successfully loggged in as Chenlei"
 send "/createsession TEST_SESSION\n"
 
+expect "Successfully created session TEST_SESSION"
+send "/leavesession TEST_SESSION\n"
+
+expect "something"
 # quit the conference
-# send "/quit\n"
+send "/quit\n"
 
 interact
