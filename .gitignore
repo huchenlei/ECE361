@@ -3,3 +3,6 @@ file_transfer/recv/*
 
 # ignore all object files
 *.o
+
+server
+client
