@@ -32,7 +32,7 @@ struct message {
 #define QUERY 12
 #define QU_ACK 13
 
-void parse_message(const char* buf, struct message* m);
+int parse_message(const char* buf, struct message* m);
 // @server response to client
 int response(int sockfd, message_t type, const char* data);
 #endif

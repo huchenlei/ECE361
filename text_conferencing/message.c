@@ -16,7 +16,7 @@
 
 #define NUM_COL 3
 // [WARNING] Does not resist mal formated packet
-void parse_message(const char* buf, struct message* m) {
+int parse_message(const char* buf, struct message* m) {
   char* strs[NUM_COL];
   int start_i = 0;
   int field_count = 0;
@@ -30,6 +30,10 @@ void parse_message(const char* buf, struct message* m) {
       if (field_count == NUM_COL) break; // there should only be 3 colons according to packet structure
     }
   }
+  if (field_count != NUM_COL) { // packet not in the right format
+    printf("Mal-formatted packet %s\n", buf);
+    return 1;
+  }
 
   m->type = atoi(strs[0]);
   m->size = atoi(strs[1]);
@@ -40,6 +44,7 @@ void parse_message(const char* buf, struct message* m) {
 #endif
   for (int i = 0; i < NUM_COL; i++)
     free(strs[i]); // free memory
+  return 0;
 }
 
 int response(int sockfd, message_t type, const char* data) {

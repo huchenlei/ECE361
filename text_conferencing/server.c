@@ -136,7 +136,12 @@ int handle_user_req() {
 #ifdef DEBUG
       printf("Receving from %s: %s\n", cur_user->name, buf);
 #endif
-      parse_message(buf, &m);
+      if (parse_message(buf, &m)) {
+        // If the packet is mal formed the user might be lost
+        // logout the user on server
+        logout_user(cur_user);
+        return 1;
+      }
 
       // Sanity check
       if (strcmp(m.source, cur_user->name) != 0) {
@@ -144,6 +149,7 @@ int handle_user_req() {
         return 1;
       }
       assert(cur_user->active);
+
       // Process each situation
       switch (m.type) {
       case EXIT:

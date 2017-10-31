@@ -19,3 +19,6 @@ $(OBJS):$(SRCS)
 
 clean:
 	rm -f *.o server client
+
+test:
+	perl test.pl
