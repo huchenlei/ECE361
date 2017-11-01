@@ -14,8 +14,8 @@
 
 #define DEBUG
 
-#define NUM_COL 3
-// [WARNING] Does not resist mal formated packet
+#define NUM_COL 4
+
 int parse_message(const char* buf, struct message* m) {
   char* strs[NUM_COL];
   int start_i = 0;
@@ -25,6 +25,7 @@ int parse_message(const char* buf, struct message* m) {
       int len = i - start_i;
       strs[field_count] = malloc(sizeof(char) * len + 1);
       strncpy(strs[field_count], buf + start_i, len);
+      strs[field_count][len] = '\0';
       start_i = i + 1; // the char after ":"
       field_count++;
       if (field_count == NUM_COL) break; // there should only be 3 colons according to packet structure
@@ -38,10 +39,15 @@ int parse_message(const char* buf, struct message* m) {
   m->type = atoi(strs[0]);
   m->size = atoi(strs[1]);
   strcpy(m->source, strs[2]);
+  strcpy(m->session_id, strs[3]);
   strncpy(m->data, buf + start_i, m->size);
   m->data[m->size] = '\0';
 #ifdef DEBUG
-  printf("parsing message as: %d %d %s %s\n", m->type, m->size, m->source, m->data);
+  printf("parsing message as: %d %d ", m->type, m->size);
+  printf("%s ", m->source);
+  printf("%s ", m->session_id);
+  printf("%s\n", m->data);
+//  printf("parsing message as: %l %d %s %s %s\n", m->type, m->size, m->source, m->session_id, m->data);
 #endif
   for (int i = 0; i < NUM_COL; i++)
     free(strs[i]); // free memory

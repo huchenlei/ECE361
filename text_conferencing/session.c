@@ -16,11 +16,12 @@ int new_session(const char* session_id, struct user* creator) {
       (sessions[i])->creator = creator;
       bzero(sessions[i]->session_id, MAX_SESSION_ID);
       bzero(sessions[i]->users, MAX_SESSION_ID);
-      strcpy(sessions[i]->session_id, session_id);
+      strncpy(sessions[i]->session_id, session_id, MAX_SESSION_ID);
       // Add creator to session list
       sessions[i]->users[0] = creator;
       sessions[i]->user_num++;
-      creator->cur_session = sessions[i];
+
+      _user_join_session(creator, sessions[i]);
       printf("User %s create new session %s\n", creator->name, sessions[i]->session_id);
       return response(creator->sockfd, NS_ACK, sessions[i]->session_id);
     }
@@ -54,7 +55,7 @@ int session_send(struct session* s, const char* msg) {
 
 int session_remove_user(struct session* s, struct user* user) {
   int err = 0;
-  assert(user->cur_session == s);
+  assert(user->joined_sessions[s->sid] == s);
   for (size_t i = 0; i < MAX_USER_SESSION; i++) {
     if (s->users[i] == user) {
       s->users[i] = NULL;

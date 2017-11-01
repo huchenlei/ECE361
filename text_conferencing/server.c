@@ -156,20 +156,20 @@ int handle_user_req() {
         err = logout_user(cur_user);
         break;
       case JOIN:
-        err = user_join_session(cur_user, find_session(m.data));
+        err = user_join_session(cur_user, find_session(m.session_id));
         break;
       case LEAVE_SESS:
-        err = user_leave_session(cur_user);
+        err = user_leave_session(cur_user, find_session(m.session_id));
         break;
       case NEW_SESS:
-        err = new_session(m.data, cur_user);
+        err = new_session(m.session_id, cur_user);
         break;
       case QUERY:
         // TODO
         printf("received a query\n");
         break;
       case MESSAGE:
-        err = user_send_msg(cur_user, m.data);
+        err = user_send_msg(cur_user, find_session(m.session_id), m.data);
         break;
       default:
         printf("Unknown type of message received...\n");

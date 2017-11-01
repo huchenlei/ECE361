@@ -13,7 +13,7 @@ extern int client_sock;
 
 //helper functions
 int isloggedin();
-int request(message_t type, const char* source, const char* data);
+int request(message_t type, const char* source, const char* session_id, const char* data);
 int recv_ack(message_t ack_type, message_t nak_type, int* retval, char** body);
 
 // menu
@@ -22,7 +22,7 @@ int menu();
 int login(const char* name, const char* pass, const char* server_ip, const char* server_port);
 int logout();
 int join_session(const char* session_id);
-int leave_session();
+int leave_session(const char* session_id);
 int create_session(const char* session_id);
 int list();
 int quit();

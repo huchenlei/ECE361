@@ -18,7 +18,9 @@
 
 // Global variables
 struct user* cur_user = NULL; // current user
-char* cur_session = NULL; // current session id
+// whether user in a session
+int is_in_session = 0;
+char cur_session[MAX_SESSION_ID];
 int client_sock = -1; // current socket
 
 #define LOGIN_CHECK                                             \
@@ -55,7 +57,8 @@ int menu() {
     }
   } else if (strcmp(command, "/leavesession") == 0) {
     LOGIN_CHECK {
-      err = leave_session();
+      scanf(" %s", session_id);
+      err = leave_session(session_id);
     }
   } else if (strcmp(command, "/createsession") == 0) {
     LOGIN_CHECK {
@@ -85,16 +88,16 @@ int isloggedin() {
   return cur_user != NULL;
 }
 
-int request(message_t type, const char* source, const char* data) {
+int request(message_t type, const char* source, const char* session_id, const char* data) {
   assert(data != NULL);
   char msg_buf[MAX_MESSAGE];
   bzero(msg_buf, MAX_MESSAGE);
-  sprintf(msg_buf, "%d:%lu:%s:%s", type, strlen(data), source, data);
+  sprintf(msg_buf, "%d:%lu:%s:%s:%s", type, strlen(data), source, session_id, data);
 
 #ifdef DEBUG
   printf("sending message: %s to server\n", msg_buf);
 #endif
-  int err = send(client_sock, msg_buf, strlen(msg_buf), 0);
+  int err = send(client_sock, msg_buf, strlen(msg_buf) + 1, 0);
   if (err == -1) {
     printf("Failed to send request: %s\n", msg_buf);
     return err;
@@ -131,7 +134,6 @@ int recv_ack(message_t ack_type, message_t nak_type, int* retval, char** body) {
     *retval = 0;
   } else {
     printf("unexpected ack/nak type %d\n", msg_type);
-    free(*body);
     return 1;
   }
   return 0;
@@ -167,7 +169,7 @@ int login(const char* name, const char* pass, const char* server_ip, const char*
     return 2;
   }
   // Connected, now send the message
-  request(LOGIN, name, pass);
+  request(LOGIN, name, "", pass);
 
   // Receive LO_ACK or LO_NAK from server
   int isack;
@@ -186,7 +188,7 @@ int login(const char* name, const char* pass, const char* server_ip, const char*
 }
 
 int logout() {
-  int err = request(EXIT, cur_user->name, "");
+  int err = request(EXIT, cur_user->name, "", "");
   close(client_sock);
   client_sock = -1;
   if (err) {
@@ -201,15 +203,15 @@ int logout() {
 
 int join_session(const char* session_id) {
   assert(strlen(session_id) < MAX_FIELD);
-  int err = request(JOIN, cur_user->name, session_id);
+  int err = request(JOIN, cur_user->name, session_id, "");
   if (err) return err;
   int isack;
   char* result = NULL;
   err = recv_ack(JN_ACK, JN_NAK, &isack, &result);
   if (err) return err;
   if(isack) {
-    cur_session = malloc((strlen(session_id) + 1) * sizeof(char));
-    strcpy(cur_session, session_id);
+    strncpy(cur_session, session_id, MAX_SESSION_ID);
+    is_in_session = 1;
     printf("Successfully joined session %s\n", cur_session);
     err = 0;
   } else {
@@ -220,18 +222,19 @@ int join_session(const char* session_id) {
   return err;
 }
 
-int leave_session() {
-  assert(cur_session != NULL);
-  int err = request(LEAVE_SESS, cur_user->name, cur_session);
+int leave_session(const char* session_id) {
+  assert(session_id != NULL);
+  int err = request(LEAVE_SESS, cur_user->name, session_id, "");
   if (err) return err;
-  printf("Leave session %s\n", cur_session);
-  free(cur_session);
-  cur_session = NULL;
+  printf("Leave session %s\n", session_id);
+  if (strcmp(cur_session, session_id) == 0) {
+    is_in_session = 0;
+  }
   return 0;
 }
 
 int create_session(const char* session_id) {
-  int err = request(NEW_SESS, cur_user->name, session_id);
+  int err = request(NEW_SESS, cur_user->name, session_id, "");
   if (err) return err;
   int isack;
   char* result = NULL;
@@ -239,8 +242,8 @@ int create_session(const char* session_id) {
   if (err) {
     printf("Failed to create session\n");
   } else {
-    cur_session = malloc((strlen(session_id) + 1) * sizeof(char));
-    strcpy(cur_session, session_id);
+    strncpy(cur_session, session_id, MAX_SESSION_ID);
+    is_in_session = 1;
     printf("Successfully created session %s\n", result);
   }
   free(result);
@@ -248,7 +251,7 @@ int create_session(const char* session_id) {
 }
 
 int list() {
-  int err = request(QUERY, "", "");
+  int err = request(QUERY, "", "", "");
   if (err) return err;
   int isack;
   char* result = NULL;
@@ -277,11 +280,11 @@ int quit() {
 }
 
 int send_message(const char* text) {
-  if (cur_session == NULL) {
+  if (!is_in_session) {
     printf("Please join a session first\n");
     return 1;
   }
-  int err = request(MESSAGE, cur_user->name, text);
+  int err = request(MESSAGE, cur_user->name, cur_session, text);
   if (err) return err;
   printf("message sent...\n");
   return 0;

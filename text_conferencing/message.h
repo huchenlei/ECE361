@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 
+#define MAX_SESSION_ID 32
 #define MAX_NAME 256
 #define MAX_DATA 2048
 
@@ -14,6 +15,7 @@ struct message {
   message_t type;
   size_t size;
   char source[MAX_NAME];
+  char session_id[MAX_SESSION_ID];
   char data[MAX_DATA];
 };
 
@@ -36,3 +38,4 @@ int parse_message(const char* buf, struct message* m);
 // @server response to client
 int response(int sockfd, message_t type, const char* data);
 #endif
+    

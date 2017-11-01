@@ -3,8 +3,6 @@
 
 #include "message.h"
 
-#define MAX_SESSION_ID 32
-
 #define MAX_SESSION 128
 #define MAX_USER_SESSION 128
 
