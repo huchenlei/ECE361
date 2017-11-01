@@ -89,20 +89,7 @@ int isloggedin() {
 }
 
 int request(message_t type, const char* source, const char* session_id, const char* data) {
-  assert(data != NULL);
-  char msg_buf[MAX_MESSAGE];
-  bzero(msg_buf, MAX_MESSAGE);
-  snprintf(msg_buf, MAX_MESSAGE, "%d:%lu:%s:%s:%s", type, strlen(data), source, session_id, data);
-
-#ifdef DEBUG
-  printf("sending message: %s to server\n", msg_buf);
-#endif
-  int err = send(client_sock, msg_buf, strlen(msg_buf) + 1, 0);
-  if (err == -1) {
-    printf("Failed to send request: %s\n", msg_buf);
-    return err;
-  }
-  return 0;
+    return send_through(client_sock, type, source, session_id, data);
 }
 
 // Remember to free body since it's malloced

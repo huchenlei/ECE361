@@ -44,10 +44,10 @@ struct session* find_session(const char* session_id) {
   return NULL; // false
 }
 
-int session_send(struct session* s, const char* msg) {
+int session_send(struct session* s, const char* source, const char* msg) {
   for (size_t i = 0; i < MAX_USER_SESSION; ++i) {
     if (s->users[i] != NULL) {
-      response(s->users[i]->sockfd, MESSAGE, msg);
+      send_through(s->users[i]->sockfd, MESSAGE, source, s->session_id, msg);
     }
   }
   return 0;

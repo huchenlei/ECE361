@@ -35,7 +35,11 @@ struct message {
 #define QU_ACK 13
 
 int parse_message(const char* buf, struct message* m);
-// @server response to client
+// @server response to client as server
 int response(int sockfd, message_t type, const char* data);
+
+// General send message through socket
+int send_through(int sockfd, message_t type, const char* source, const char* session_id, const char* data);
+
 #endif
     

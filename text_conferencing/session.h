@@ -23,7 +23,7 @@ int new_session(const char* session_id, struct user* creator);
 int session_is_full(struct session* s);
 struct session* find_session(const char* session_id);
 // Boardcast to all users in session
-int session_send(struct session* s, const char* msg);
+int session_send(struct session* s, const char* source, const char* msg);
 int session_remove_user(struct session* s, struct user* user);
 int session_add_user(struct session* s, struct user* user);
 int session_destory(struct session* s);

@@ -35,7 +35,9 @@ int main(int argc, char *argv[]) {
       char buf[MAX_MESSAGE];
       recv(client_sock, buf, MAX_MESSAGE, 0);
       buf[MAX_MESSAGE - 1] = '\0'; // Avoid overflow
-      printf("client recevicing: %s\n", buf);
+      struct message m;
+      parse_message(buf, &m);
+      printf("[%s] %s says: %s\n", m.session_id, m.source, m.data);
       // TODO to be removed
       /* scanf("%s", buf); // block the print */
     } else if (FD_ISSET(fileno(stdin), &fds)) {

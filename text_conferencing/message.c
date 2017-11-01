@@ -55,11 +55,25 @@ int parse_message(const char* buf, struct message* m) {
 }
 
 int response(int sockfd, message_t type, const char* data) {
-  char buf[MAX_MESSAGE];
-  sprintf(buf, "%d:%s", type, data);
-  int err = send(sockfd, buf, strlen(buf) + 1, 0);
+    return send_through(sockfd, type, "Server", "Server", data);
+}
+
+int send_through(int sockfd, message_t type, const char* source, const char* session_id, const char* data) {
+  assert(data != NULL);
+  assert(session_id != NULL);
+  assert(source != NULL);
+  assert(sockfd > 0);
+  char msg_buf[MAX_MESSAGE];
+  bzero(msg_buf, MAX_MESSAGE);
+  snprintf(msg_buf, MAX_MESSAGE, "%d:%lu:%s:%s:%s", type, strlen(data), source, session_id, data);
+
+#ifdef DEBUG
+  printf("[send through] %s \n", msg_buf);
+#endif
+  
+  int err = send(sockfd, msg_buf, strlen(msg_buf) + 1, 0);
   if (err == -1) {
-    printf("response: failed to response to client sockfd %d\n", sockfd);
+    printf("[send through] Failed to send message: %s\n", msg_buf);
     return 1;
   }
   return 0;

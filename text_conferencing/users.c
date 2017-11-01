@@ -119,11 +119,11 @@ int user_join_session(struct user* user, struct session* s) {
 
 int user_leave_session(struct user* user, struct session* s) {
   if (s == NULL) {
-    response(user->sockfd, MESSAGE, "[Server] Session does not exist");
+    response(user->sockfd, MESSAGE, "Session does not exist");
     return 1;
   }
   if (user->joined_sessions[s->sid] == NULL) {
-    response(user->sockfd, MESSAGE, "[Server] Not in the session specified");
+    response(user->sockfd, MESSAGE, "Not in the session specified");
     return 1;
   }
   size_t cur_sid = s->sid;
@@ -131,7 +131,7 @@ int user_leave_session(struct user* user, struct session* s) {
   char buf_user[MAX_DATA];
   snprintf(buf_all, MAX_DATA, "%s has left session %s", user->name, s->session_id);
   // send response to user
-  snprintf(buf_user, MAX_DATA, "[Server] leaving session %s...", s->session_id);
+  snprintf(buf_user, MAX_DATA, "leaving session %s...", s->session_id);
 
   // remove user in session
   if (session_remove_user(s, user)) {
@@ -146,7 +146,7 @@ int user_leave_session(struct user* user, struct session* s) {
   if (sessions[cur_sid] != NULL) {
       // boardcast to users left in current session if the session still exist
       // after the user quit the session
-      session_send(sessions[cur_sid], buf_all);
+      session_send(sessions[cur_sid], "Server", buf_all);
   }
   response(user->sockfd, MESSAGE, buf_user);
 
@@ -157,14 +157,14 @@ int user_leave_session(struct user* user, struct session* s) {
 int user_send_msg(struct user* user, struct session* s, const char* msg) {
   assert(user != NULL);
   if (user->joined_sessions[s->sid] == NULL) {
-    response(user->sockfd, MESSAGE, "[Server] Please join that session first");
+    response(user->sockfd, MESSAGE, "Please join that session first");
     return 1;
   }
   if (s == NULL) {
-    response(user->sockfd, MESSAGE, "[Server] Session does not exist");
+    response(user->sockfd, MESSAGE, "Session does not exist");
     return 1;
   }
-  return session_send(s, msg);
+  return session_send(s, user->name, msg);
 }
 
 // TODO
@@ -172,6 +172,6 @@ int user_switch_session(struct user* user, struct session* s) {
   assert(user != NULL);
   if (user->joined_sessions[s->sid] != NULL) {
     user->cur_session = user->joined_sessions[s->sid];
-    response(user->sockfd, MESSAGE, "[Server] Successfully switch");
+    response(user->sockfd, MESSAGE, "Successfully switch");
   }
 }
