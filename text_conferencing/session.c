@@ -15,7 +15,11 @@ int new_session(const char* session_id, struct user* creator) {
       (sessions[i])->user_num = 0;
       (sessions[i])->creator = creator;
       bzero(sessions[i]->session_id, MAX_SESSION_ID);
-      bzero(sessions[i]->users, MAX_SESSION_ID);
+//      for (size_t j = 0; i < MAX_SESSION_ID; ++j){
+//          sessions[i]->users[j] = NULL;
+//      } // alternative way to initialize users which is not that elegant
+      // Initialize users of each session to NULL(0x0)
+      bzero(sessions[i]->users, MAX_SESSION_ID * sizeof(struct user*));
       strncpy(sessions[i]->session_id, session_id, MAX_SESSION_ID);
       // Add creator to session list
       sessions[i]->users[0] = creator;

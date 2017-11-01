@@ -65,6 +65,11 @@ int menu() {
       scanf(" %s", session_id);
       err = create_session(session_id);
     }
+  } else if (strcmp(command, "/switchsession") == 0) {
+    LOGIN_CHECK {
+      scanf(" %s", session_id);
+      err = switch_session(session_id);
+    }
   } else if (strcmp(command, "/list") == 0) {
     LOGIN_CHECK{
       err = list();
@@ -89,7 +94,7 @@ int isloggedin() {
 }
 
 int request(message_t type, const char* source, const char* session_id, const char* data) {
-    return send_through(client_sock, type, source, session_id, data);
+  return send_through(client_sock, type, source, session_id, data);
 }
 
 // Remember to free body since it's malloced
@@ -100,27 +105,18 @@ int recv_ack(message_t ack_type, message_t nak_type, int* retval, char** body) {
     printf("Failed receiving ack/nak!...\n");
     return 1;
   }
-  char* iter = msg_buf;
-  size_t type_len = 0;
-  while (*iter != ':') {
-    type_len++;
-    iter++;
-  }
-  char type_str[type_len + 1]; // + 1 for '\0'
-  strncpy(type_str, msg_buf, type_len);
-  message_t msg_type = atoi(type_str);
-#ifdef DEBUG
-  printf("ack: message type: %d\nmessage content: %s\n", msg_type, msg_buf);
-#endif
-  *body = malloc(sizeof(char) * (strlen(msg_buf) + 1));
-  strcpy(*body, msg_buf + type_len + 1);
+  struct message m;
+  parse_message(msg_buf, &m);
 
-  if (msg_type == ack_type) {
+  *body = malloc(sizeof(char) * (m.size + 1));
+  strcpy(*body, m.data);
+
+  if (m.type == ack_type) {
     *retval = 1;
-  } else if (msg_type == nak_type) {
+  } else if (m.type == nak_type) {
     *retval = 0;
   } else {
-    printf("unexpected ack/nak type %d\n", msg_type);
+    printf("unexpected ack/nak type %d\n", m.type);
     return 1;
   }
   return 0;
@@ -140,7 +136,7 @@ int login(const char* name, const char* pass, const char* server_ip, const char*
   // loop through all the results and connect to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next) {
     if ((client_sock = socket(p->ai_family, p->ai_socktype,
-                         p->ai_protocol)) == -1) {
+                              p->ai_protocol)) == -1) {
       perror("client: socket");
       continue;
     }
@@ -196,8 +192,8 @@ int join_session(const char* session_id) {
   char* result = NULL;
   err = recv_ack(JN_ACK, JN_NAK, &isack, &result);
   if (err) {
-      free(result);
-      return err;
+    free(result);
+    return err;
   }
   if(isack) {
     strncpy(cur_session, session_id, MAX_SESSION_ID);
@@ -235,6 +231,23 @@ int create_session(const char* session_id) {
     strncpy(cur_session, session_id, MAX_SESSION_ID);
     is_in_session = 1;
     printf("Successfully created session %s\n", result);
+  }
+  free(result);
+  return err;
+}
+
+int switch_session(const char* session_id) {
+  int err = request(SW_SESS, cur_user->name, session_id, "");
+  if (err) return err;
+  int isack;
+  char* result = NULL;
+  err = recv_ack(SW_ACK, UNKNOWN, &isack, &result);
+  if (err) {
+    printf("Failed to switch session %s\n", result);
+  } else {
+    is_in_session = 1;
+    strncpy(cur_session, session_id, MAX_SESSION_ID);
+    printf("Successfully switching to %s\n", session_id);
   }
   free(result);
   return err;

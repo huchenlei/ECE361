@@ -47,7 +47,6 @@ int parse_message(const char* buf, struct message* m) {
   printf("%s ", m->source);
   printf("%s ", m->session_id);
   printf("%s\n", m->data);
-//  printf("parsing message as: %l %d %s %s %s\n", m->type, m->size, m->source, m->session_id, m->data);
 #endif
   for (int i = 0; i < NUM_COL; i++)
     free(strs[i]); // free memory
@@ -77,4 +76,8 @@ int send_through(int sockfd, message_t type, const char* source, const char* ses
     return 1;
   }
   return 0;
+}
+
+void print_message(const struct message* m) {
+  printf("[%s] %s says: %s\n", m->session_id, m->source, m->data);
 }

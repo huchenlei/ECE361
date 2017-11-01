@@ -33,6 +33,9 @@ struct message {
 #define MESSAGE 11
 #define QUERY 12
 #define QU_ACK 13
+/* Switching session */
+#define SW_SESS 14
+#define SW_ACK 15
 
 int parse_message(const char* buf, struct message* m);
 // @server response to client as server
@@ -41,5 +44,5 @@ int response(int sockfd, message_t type, const char* data);
 // General send message through socket
 int send_through(int sockfd, message_t type, const char* source, const char* session_id, const char* data);
 
+void print_message(const struct message* m);
 #endif
-    

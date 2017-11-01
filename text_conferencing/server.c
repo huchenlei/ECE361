@@ -171,6 +171,9 @@ int handle_user_req() {
       case MESSAGE:
         err = user_send_msg(cur_user, find_session(m.session_id), m.data);
         break;
+          case SW_SESS:
+              err = user_switch_session(cur_user, find_session(m.session_id));
+              break;
       default:
         printf("Unknown type of message received...\n");
         err = 1;
@@ -178,4 +181,5 @@ int handle_user_req() {
       return err;
     } // if
   } // for loop
+  return 0;
 }

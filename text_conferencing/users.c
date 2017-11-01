@@ -167,11 +167,18 @@ int user_send_msg(struct user* user, struct session* s, const char* msg) {
   return session_send(s, user->name, msg);
 }
 
-// TODO
 int user_switch_session(struct user* user, struct session* s) {
   assert(user != NULL);
+  if (s == NULL) {
+    response(user->sockfd, UNKNOWN, "Session does not exist");
+    return 1;
+  }
   if (user->joined_sessions[s->sid] != NULL) {
     user->cur_session = user->joined_sessions[s->sid];
-    response(user->sockfd, MESSAGE, "Successfully switch");
+    response(user->sockfd, SW_ACK, "");
+    return 0;
+  } else {
+    response(user->sockfd, UNKNOWN, "User has not join the session specified, please join the session first");
+    return 1;
   }
 }

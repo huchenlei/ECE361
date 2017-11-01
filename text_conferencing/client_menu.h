@@ -24,6 +24,7 @@ int logout();
 int join_session(const char* session_id);
 int leave_session(const char* session_id);
 int create_session(const char* session_id);
+int switch_session(const char* session_id);
 int list();
 int quit();
 int send_message(const char* text);
