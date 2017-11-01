@@ -92,7 +92,7 @@ int request(message_t type, const char* source, const char* session_id, const ch
   assert(data != NULL);
   char msg_buf[MAX_MESSAGE];
   bzero(msg_buf, MAX_MESSAGE);
-  sprintf(msg_buf, "%d:%lu:%s:%s:%s", type, strlen(data), source, session_id, data);
+  snprintf(msg_buf, MAX_MESSAGE, "%d:%lu:%s:%s:%s", type, strlen(data), source, session_id, data);
 
 #ifdef DEBUG
   printf("sending message: %s to server\n", msg_buf);
@@ -208,7 +208,10 @@ int join_session(const char* session_id) {
   int isack;
   char* result = NULL;
   err = recv_ack(JN_ACK, JN_NAK, &isack, &result);
-  if (err) return err;
+  if (err) {
+      free(result);
+      return err;
+  }
   if(isack) {
     strncpy(cur_session, session_id, MAX_SESSION_ID);
     is_in_session = 1;
