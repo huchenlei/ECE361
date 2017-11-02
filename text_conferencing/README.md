@@ -22,6 +22,6 @@ Leave all joined sessions and quit
 
 ## Testing
 - run `make test` to recompile the program and start the server
-- run `./client_test.tv` for some basic functionality test for single user interactions
+- run `./client_test.tv <port number>` for some basic functionality test for single user interactions
 
 
