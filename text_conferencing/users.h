@@ -2,7 +2,7 @@
 #define USERS_H
 
 #include "message.h"
-#define USER_NUM 2
+#define USER_NUM 3
 #define MAX_PASS 256
 #define MAX_JOINED_SESSION 128 // This number is the same as MAX_POSSIBLE session
 
