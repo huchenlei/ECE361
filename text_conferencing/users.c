@@ -14,15 +14,10 @@
 #include "message.h"
 #include "session.h"
 
-#define SESSION_CHECK(SOCK, SESSION)                            \
-  if (SESSION == NULL) {                                        \
-    response(SOCK, UNKNOWN, "Session does not exist");  \
-    return 1;                                                   \
-  }
-
 struct user users[USER_NUM] = {
   {.name = "Chenlei", .pass = "chenlei"},
-  {.name = "Alex", .pass = "alex"}
+  {.name = "Alex", .pass = "alex"},
+  {.name = "Hamid", .pass = "hamid"}
 };
 
 void _user_join_session(struct user* user, struct session* s) {
