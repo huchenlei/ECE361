@@ -14,8 +14,6 @@
 #include "message.h"
 #include "client_menu.h"
 
-#define DEBUG
-
 // Global variables
 struct user* cur_user = NULL; // current user
 // whether user in a session
@@ -32,6 +30,7 @@ int menu() {
 
   int err = 0;
   char session_id[MAX_FIELD];
+  char username[MAX_FIELD];
   char command[MAX_COMMAND_LEN];
   scanf("%s", command);
 
@@ -73,6 +72,12 @@ int menu() {
   } else if (strcmp(command, "/list") == 0) {
     LOGIN_CHECK{
       err = list();
+    }
+  } else if (strcmp(command, "/invite") == 0) {
+    LOGIN_CHECK {
+      scanf(" %s", username);
+      scanf(" %s", session_id);
+      err = invite(username, session_id);
     }
   } else if (strcmp(command, "/quit") == 0) {
     err = quit();
@@ -253,8 +258,23 @@ int switch_session(const char* session_id) {
   return err;
 }
 
+int invite(const char* username, const char* session_id) {
+  int err = request(INVITE, cur_user->name, session_id, username);
+  if (err) return err;
+  int isack;
+  char* result = NULL;
+  err = recv_ack(INVI_ACK, UNKNOWN, &isack, &result);
+  if (err) {
+    printf("Failed to invite %s: %s\n", username, result);
+  } else {
+    printf("%s\n", result);
+  }
+  free(result);
+  return err;
+}
+
 int list() {
-  int err = request(QUERY, "", "", "");
+  int err = request(QUERY, cur_user->name, "", "");
   if (err) return err;
   int isack;
   char* result = NULL;
@@ -262,8 +282,7 @@ int list() {
   if (err) {
     printf("Failed to list sessions\n");
   } else {
-    // TODO format the list string
-    printf("Sessions: %s\n", result);
+    printf("Current Sessions: \n%s\n", result);
   }
   free(result);
   return err;

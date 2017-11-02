@@ -14,7 +14,11 @@
 #include "message.h"
 #include "session.h"
 
-#define DEBUG
+#define SESSION_CHECK(SOCK, SESSION)                            \
+  if (SESSION == NULL) {                                        \
+    response(SOCK, UNKNOWN, "Session does not exist");  \
+    return 1;                                                   \
+  }
 
 struct user users[USER_NUM] = {
   {.name = "Chenlei", .pass = "chenlei"},
@@ -84,7 +88,7 @@ int logout_user(struct user* user) {
   assert(user != NULL);
   for (size_t i = 0; i < MAX_JOINED_SESSION; i++) {
     if (user->joined_sessions[i] != NULL) { // remove user in all sessions joined
-      user_leave_session(user, user->joined_sessions[i]);
+      user_leave_session(user, user->joined_sessions[i], 0);
     }
   }
   user->active = 0;
@@ -114,14 +118,17 @@ int user_join_session(struct user* user, struct session* s) {
   if (err) return err; // TODO handle other errors
   _user_join_session(user, s);
   response(user->sockfd, JN_ACK, s->session_id);
+  snprintf(msg, MAX_DATA, "%s joined session %s", user->name, s->session_id);
+  session_send(s, "Server", msg);
   return 0;
 }
 
-int user_leave_session(struct user* user, struct session* s) {
+int user_leave_session(struct user* user, struct session* s, int do_ack) {
   if (s == NULL) {
-    response(user->sockfd, MESSAGE, "Session does not exist");
+    response(user->sockfd, UNKNOWN, "Session does not exist");
     return 1;
   }
+
   if (user->joined_sessions[s->sid] == NULL) {
     response(user->sockfd, MESSAGE, "Not in the session specified");
     return 1;
@@ -148,7 +155,9 @@ int user_leave_session(struct user* user, struct session* s) {
       // after the user quit the session
       session_send(sessions[cur_sid], "Server", buf_all);
   }
-  response(user->sockfd, MESSAGE, buf_user);
+  if (do_ack) {
+    response(user->sockfd, MESSAGE, buf_user);
+  }
 
   user->joined_sessions[cur_sid] = NULL;
   return 0;
@@ -181,4 +190,33 @@ int user_switch_session(struct user* user, struct session* s) {
     response(user->sockfd, UNKNOWN, "User has not join the session specified, please join the session first");
     return 1;
   }
+}
+
+int invite_user(struct user* inviter, struct user* invitee, struct session* s) {
+  assert(inviter != NULL);
+  if (s == NULL) {
+    response(inviter->sockfd, UNKNOWN, "Session does not exist");
+    return 1;
+  }
+  if (invitee == NULL) {
+    response(inviter->sockfd, UNKNOWN, "The user with specified name does not exist");
+    return 1;
+  }
+  if (!invitee->active) {
+    response(inviter->sockfd, UNKNOWN, "The user with specified name is not online now");
+    return 1;
+  }
+  int err = 0;
+  err = response(inviter->sockfd, INVI_ACK, "Invitation has been sent");
+  err = err || send_through(invitee->sockfd, INVITE, inviter->name, s->session_id, "");
+  return err;
+}
+
+struct user* find_user(const char* username) {
+  for (size_t i = 0; i < USER_NUM; i++) {
+    if (strcmp(username, users[i].name) == 0) {
+      return &users[i];
+    }
+  }
+  return NULL;
 }

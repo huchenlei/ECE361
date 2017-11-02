@@ -1,4 +1,5 @@
 CC = gcc
+#CFLAGS=-g -c -D DEBUG
 CFLAGS=-g -c
 LIBS=-lm -lpthread
 SRCS=server.c client.c users.c client_menu.c message.c session.c

@@ -27,4 +27,7 @@ int session_send(struct session* s, const char* source, const char* msg);
 int session_remove_user(struct session* s, struct user* user);
 int session_add_user(struct session* s, struct user* user);
 int session_destory(struct session* s);
+// return the formatted session info
+int get_session_info(struct session* s, char* dest);
+int get_all_session_info(char* dest);
 #endif

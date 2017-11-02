@@ -18,8 +18,6 @@
 // Configuable constants
 #define WINDOW_SIZE 32 // listening queue size
 
-#define DEBUG
-
 // Handles user operations
 int handle_user_req();
 
@@ -133,9 +131,9 @@ int handle_user_req() {
         printf("Failed to receive message from sockfd %d\n", cur_user->sockfd);
         continue;
       }
-#ifdef DEBUG
-      printf("Receving from %s: %s\n", cur_user->name, buf);
-#endif
+/* #ifdef DEBUG */
+/*       printf("Receving from %s: %s\n", cur_user->name, buf); */
+/* #endif */
       if (parse_message(buf, &m)) {
         // If the packet is mal formed the user might be lost
         // logout the user on server
@@ -159,21 +157,26 @@ int handle_user_req() {
         err = user_join_session(cur_user, find_session(m.session_id));
         break;
       case LEAVE_SESS:
-        err = user_leave_session(cur_user, find_session(m.session_id));
+        err = user_leave_session(cur_user, find_session(m.session_id), 1);
         break;
       case NEW_SESS:
         err = new_session(m.session_id, cur_user);
         break;
-      case QUERY:
-        // TODO
-        printf("received a query\n");
+      case QUERY: {
+        char msg[MAX_DATA];
+        get_all_session_info(msg);
+        err = response(cur_user->sockfd, QU_ACK, msg);
+      }
         break;
       case MESSAGE:
         err = user_send_msg(cur_user, find_session(m.session_id), m.data);
         break;
-          case SW_SESS:
-              err = user_switch_session(cur_user, find_session(m.session_id));
-              break;
+      case SW_SESS:
+        err = user_switch_session(cur_user, find_session(m.session_id));
+        break;
+      case INVITE:
+        err = invite_user(cur_user, find_user(m.data), find_session(m.session_id));
+        break;
       default:
         printf("Unknown type of message received...\n");
         err = 1;

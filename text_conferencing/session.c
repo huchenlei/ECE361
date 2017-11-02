@@ -95,3 +95,23 @@ int session_add_user(struct session* s, struct user* user) {
   }
   return 1; // Session full
 }
+
+int get_session_info(struct session* s, char* dest) {
+  assert(s != NULL);
+  if (dest == NULL) return 1;
+  snprintf(dest, MAX_DATA, "%d. %s [%d/%d] created by %s\n", s->sid + 1, s->session_id, s->user_num, MAX_USER_SESSION, s->creator->name);
+  return 0;
+}
+
+int get_all_session_info(char* dest) {
+  size_t cur_pos = 0;
+  char buf[MAX_DATA];
+  for (size_t i = 0; i < MAX_SESSION; i++) {
+    if (sessions[i] != NULL) {
+      get_session_info(sessions[i], buf);
+      strncpy(dest + cur_pos, buf, MAX_DATA);
+      cur_pos += strlen(buf);
+    }
+  }
+  return 0;
+}

@@ -36,6 +36,9 @@ struct message {
 /* Switching session */
 #define SW_SESS 14
 #define SW_ACK 15
+/* Invite user */
+#define INVITE 16
+#define INVI_ACK 17
 
 int parse_message(const char* buf, struct message* m);
 // @server response to client as server

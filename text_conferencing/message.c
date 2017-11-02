@@ -12,8 +12,6 @@
 
 #include "message.h"
 
-#define DEBUG
-
 #define NUM_COL 4
 
 int parse_message(const char* buf, struct message* m) {
@@ -69,7 +67,7 @@ int send_through(int sockfd, message_t type, const char* source, const char* ses
 #ifdef DEBUG
   printf("[send through] %s \n", msg_buf);
 #endif
-  
+
   int err = send(sockfd, msg_buf, strlen(msg_buf) + 1, 0);
   if (err == -1) {
     printf("[send through] Failed to send message: %s\n", msg_buf);
