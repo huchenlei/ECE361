@@ -247,7 +247,7 @@ int switch_session(const char* session_id) {
   int isack;
   char* result = NULL;
   err = recv_ack(SW_ACK, UNKNOWN, &isack, &result);
-  if (err) {
+  if (!isack) {
     printf("Failed to switch session %s\n", result);
   } else {
     is_in_session = 1;

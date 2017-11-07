@@ -39,6 +39,10 @@ set session1 [lindex $sessions 0]
 send "/invite $invitee $session1\n"
 expect -re ".*sent.*"
 
+# Switch to a unknown session
+send "/switchsession SOMETHING_DOES_NOT_EXIST";
+expect -re ".*failed";
+
 foreach session_name $sessions {
     send "/switchsession $session_name\n"
     # dummy expect
